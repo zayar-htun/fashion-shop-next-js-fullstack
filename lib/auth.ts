@@ -19,5 +19,16 @@ export const auth = betterAuth({
       prompt: "select_account", // optional, forces account selection on every login
     },
   },
+  user: {
+    additionalFields: {
+      role: {
+        type: "string",
+        input: false,
+      },
+    },
+  },
   plugins: [nextCookies()],
 });
+
+export type Session = typeof auth.$Infer.Session;
+export type User = typeof auth.$Infer.Session.user;
