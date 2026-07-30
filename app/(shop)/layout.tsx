@@ -2,14 +2,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { getSession } from "@/lib/session";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import ShopHeader from "@/components/layout/shop-header";
 
 function ShopLayoutFallback() {
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur">
-        <div className="flex h-16 items-center px-4 mx-auto max-w-7xl sm:px-6 lg:px-8 justify-between gap-4">
+      <header className="bg-background/90 supports-backdrop-filter:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
           <Skeleton className="h-6 w-32 rounded-md" />
-          <div className="flex items-center gap-4">
+          <div className="hidden items-center gap-4 md:flex">
             {Array.from({ length: 5 }).map((_, index) => (
               <Skeleton key={index} className="size-6 w-16 rounded-md" />
             ))}
@@ -43,7 +44,7 @@ async function ShopShell({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   return (
     <div>
-      <p>shopHeader</p>
+      <ShopHeader />
       {children}
     </div>
   );
