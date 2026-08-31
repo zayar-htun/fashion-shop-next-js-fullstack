@@ -1,9 +1,22 @@
-import React from 'react'
+import SignUpForm from "@/components/auth/signup-from";
+import { getSession } from "@/lib/session";
+import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
-function Register() {
-  return (
-    <div>Register</div>
-  )
+async function RegisterPageContent() {
+  const session = await getSession();
+
+  if (session) {
+    redirect("/");
+  }
+
+  return <SignUpForm />;
 }
 
-export default Register
+export default function Register() {
+  return (
+    <Suspense fallback={<SignUpForm />}>
+      <RegisterPageContent />
+    </Suspense>
+  );
+}
