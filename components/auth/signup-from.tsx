@@ -12,8 +12,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "../ui/button";
 import { RegisterInput, registerSchema } from "@/lib/validations/auth";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { signUp, emailOtp } from "@/lib/auth-client";
 
 export default function SignUpForm() {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -25,20 +30,36 @@ export default function SignUpForm() {
   });
 
   function onSubmit(data: RegisterInput) {
-    // toast("You submitted the following values:", {
-    //   description: (
-    //     <pre className="bg-code text-code-foreground mt-2 w-[320px] overflow-x-auto rounded-md p-4">
-    //       <code>{JSON.stringify(data, null, 2)}</code>
-    //     </pre>
-    //   ),
-    //   position: "bottom-right",
-    //   classNames: {
-    //     content: "flex flex-col gap-2",
-    //   },
-    //   style: {
-    //     "--border-radius": "calc(var(--radius)  + 4px)",
-    //   } as React.CSSProperties,
-    // });
+    startTransition(async () => {
+      const { error: signUpError } = await signUp.email({
+        name: data?.name,
+        email: data?.email,
+        password: data?.password,
+      });
+
+      if (signUpError) {
+        form.setError("root", {
+          message: signUpError?.message ?? "Registration failed",
+        });
+        return;
+      }
+
+      const { error: otpError } = await emailOtp.sendVerificationOtp({
+        email: data?.email,
+        type: "email-verification",
+      });
+
+      if (otpError) {
+        form.setError("root", {
+          message: otpError?.message ?? "Failed to send otp",
+        });
+        return;
+      }
+
+      router.push(
+        `/verify-otp?email=${encodeURIComponent(data.email)}&flow=register`,
+      );
+    });
   }
 
   return (
@@ -123,11 +144,9 @@ export default function SignUpForm() {
         <Button
           type="submit"
           className="h-11 w-full rounded-xl"
-          disabled={form.formState.isSubmitting}
+          disabled={isPending}
         >
-          {form.formState.isSubmitting
-            ? "Creating account..."
-            : "Create account"}
+          {isPending ? "Creating account..." : "Create account"}
         </Button>
       </FieldGroup>
     </form>

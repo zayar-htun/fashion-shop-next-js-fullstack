@@ -11,7 +11,7 @@ interface SendEmailParams {
 export async function SendEmail({ to, subject, html }: SendEmailParams) {
   try {
     await resend.emails.send({
-      from: "onboarding@resend.com",
+      from: process.env.AUTH_EMAIL_FROM || "onboarding@resend.com",
       to,
       subject,
       html,
