@@ -8,7 +8,8 @@
     "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "postinstall": "prisma generate",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "prisma7:generate": "prisma7 generate"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -16,6 +17,7 @@
     "@prisma/adapter-neon": "^7.3.0",
     "@prisma/adapter-pg": "^7.3.0",
     "@prisma/client": "^7.9.1",
+    "@prisma/orm-postgres": "8.0.0-rc.8",
     "better-auth": "^1.4.18",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -33,6 +35,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@prisma/prisma7": "7.10.0-dev.58",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/pg": "^8.16.0",
@@ -43,7 +46,7 @@
     "eslint-config-next": "16.2.12",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
-    "prisma": "^7.9.1",
+    "prisma": "8.0.0-rc.13",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"
