@@ -15,6 +15,7 @@ import { RegisterInput, registerSchema } from "@/lib/validations/auth";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { signUp, emailOtp } from "@/lib/auth-client";
+import { RegisterUser } from "@/app/actions/auth";
 
 export default function SignUpForm() {
   const router = useRouter();
@@ -31,33 +32,28 @@ export default function SignUpForm() {
 
   function onSubmit(data: RegisterInput) {
     startTransition(async () => {
-      const { error: signUpError } = await signUp.email({
-        name: data?.name,
-        email: data?.email,
-        password: data?.password,
-      });
-
-      if (signUpError) {
-        form.setError("root", {
-          message: signUpError?.message ?? "Registration failed",
-        });
-        return;
-      }
-
-      const { error: otpError } = await emailOtp.sendVerificationOtp({
-        email: data?.email,
-        type: "email-verification",
-      });
-
-      if (otpError) {
-        form.setError("root", {
-          message: otpError?.message ?? "Failed to send otp",
-        });
+      const result = await RegisterUser(data);
+      if (!result?.success) {
+        if (result?.code === "ACCOUNT_FROZEN") {
+          router.push("/login/frozen");
+        }
+        if (result?.fieldErrors) {
+          Object.entries(result.fieldErrors).forEach(([field, errors]) => {
+            if (errors && errors.length > 0) {
+              form.setError(field as keyof RegisterInput, {
+                message: errors.join(", "),
+              });
+            }
+          });
+        }
+        if (result.error) {
+          form.setError("root", { message: result.error });
+        }
         return;
       }
 
       router.push(
-        `/verify-otp?email=${encodeURIComponent(data.email)}&flow=register`,
+        `/verify-otp?email=${encodeURIComponent(result?.data?.email || "")}&flow=register`,
       );
     });
   }
