@@ -13,7 +13,7 @@ export const registerSchema = z
     email: z.email("Please enter a valid email address"),
     password: z
       .string()
-      .min(12, "Password must be at least 2 characters")
+      .min(8, "Password must be at least 8 characters")
       .max(128, "Password must be at most 128 characters")
       .regex(/[a-z]/, "Password must contain a lowercase letter")
       .regex(/[A-Z]/, "Password must contain a uppercase letter")
