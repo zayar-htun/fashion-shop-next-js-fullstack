@@ -4,7 +4,12 @@ import { auth } from "@/lib/auth";
 import { isAdminRole } from "@/lib/auth/role";
 import { ErrorCodes } from "@/lib/error_code";
 import { db } from "@/lib/prisma";
-import { RegisterInput, registerSchema } from "@/lib/validations/auth";
+import {
+  OtpInput,
+  otpSchema,
+  RegisterInput,
+  registerSchema,
+} from "@/lib/validations/auth";
 import { APIError } from "better-auth";
 import { headers } from "next/headers";
 import { upsertPendingRegisteration } from "@/lib/auth/pending-registartion";
@@ -130,5 +135,61 @@ export async function RegisterUser(data: RegisterInput) {
   return {
     success: true,
     data: { name, email: normalizedEmail },
+  };
+}
+
+export async function ResendVerificationOTP(input: OtpInput) {
+  const parsed = otpSchema.safeParse(input); // Validate the input using the otpSchema
+  if (!parsed.success) {
+    return {
+      success: false,
+      fieldErrors: z.flattenError(parsed.error).fieldErrors,
+    };
+  }
+  const { email, otp } = parsed.data;
+  const normalizedEmail = email.toLowerCase().trim();
+
+  try {
+    await auth.api.verifyEmailOTP({
+      body: {
+        email: normalizedEmail,
+        otp,
+      },
+      headers: await headers(),
+    });
+  } catch (error) {
+    const message =
+      error instanceof APIError ? error.message : "Failed to verify OTP";
+
+    if (message.toLowerCase().includes("invalid otp")) {
+      return {
+        success: false,
+        error: ErrorCodes.INVALID_OTP.message,
+        code: ErrorCodes.INVALID_OTP.code,
+      };
+    }
+    if (message.toLowerCase().includes("expired otp")) {
+      return {
+        success: false,
+        error: ErrorCodes.OTP_EXPIRED.message,
+        code: ErrorCodes.OTP_EXPIRED.code,
+      };
+    }
+    if (message.toLowerCase().includes("too many")) {
+      return {
+        success: false,
+        error: ErrorCodes.OTP_TOO_MANY.message,
+        code: ErrorCodes.OTP_TOO_MANY.code,
+      };
+    }
+    return {
+      success: false,
+      error: getErrorMessage(error, message),
+    };
+  }
+
+  return {
+    success: true,
+    data: { email: normalizedEmail },
   };
 }

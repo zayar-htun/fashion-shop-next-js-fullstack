@@ -34,4 +34,8 @@ export const ErrorCodes = {
     code: "PASSWORD_RESET_REQUIRED",
     message: "A password reset is required.",
   },
+  OTP_TOO_MANY: {
+    code: "OTP_TOO_MANY",
+    message: "Too many OTP requests. Please try again later.",
+  },
 };
