@@ -12,7 +12,10 @@ import {
 } from "@/lib/validations/auth";
 import { APIError } from "better-auth";
 import { headers } from "next/headers";
-import { upsertPendingRegisteration } from "@/lib/auth/pending-registartion";
+import {
+  applyPendingRegistration,
+  upsertPendingRegisteration,
+} from "@/lib/auth/pending-registartion";
 
 import z from "zod";
 
@@ -187,6 +190,8 @@ export async function ResendVerificationOTP(input: OtpInput) {
       error: getErrorMessage(error, message),
     };
   }
+
+  await applyPendingRegistration(normalizedEmail);
 
   return {
     success: true,

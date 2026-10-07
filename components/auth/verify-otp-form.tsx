@@ -23,6 +23,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { sanitizeCallbackUrl } from "@/lib/auth/safe-redirect";
 import AuthFormPanel from "./auth-form-panel";
 import { Button } from "../ui/button";
+import { ResendVerificationOTP } from "@/app/actions/auth";
 
 function VerifyOtpForm() {
   const router = useRouter();
@@ -45,9 +46,24 @@ function VerifyOtpForm() {
       if (flow === "login") {
         // Handle login flow
       } else if (flow === "register") {
-        // Handle register flow
+        const result = await ResendVerificationOTP(data);
+        if (!result.success) {
+          if (result?.fieldErrors) {
+            Object.entries(result.fieldErrors).forEach(([field, errors]) => {
+              if (errors && errors.length > 0) {
+                form.setError(field as keyof OtpInput, {
+                  message: errors.join(", "),
+                });
+              }
+            });
+          }
+          if (result.error) {
+            form.setError("root", { message: result.error });
+          }
+          return;
+        }
       }
-      return;
+      router.replace(callBackUrl || "/");
     });
   }
 

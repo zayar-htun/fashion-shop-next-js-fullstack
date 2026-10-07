@@ -16,3 +16,47 @@ export async function upsertPendingRegisteration(
     conflictOn: { email },
   });
 }
+
+export async function applyPendingRegistration(
+  email: string,
+): Promise<boolean> {
+  const pendingRegistration = await db.orm.public.PendingRegistration.where({
+    email,
+  }).first();
+
+  if (
+    !pendingRegistration ||
+    Temporal.PlainDateTime.compare(
+      pendingRegistration.expiresAt,
+      Temporal.Now.plainDateTimeISO(),
+    ) < 0
+  ) {
+    if (pendingRegistration) {
+      await db.orm.public.PendingRegistration.where({ email }).delete();
+    }
+    return false;
+  }
+  const user = await db.orm.public.User.select("id").where({ email }).first();
+  if (!user) {
+    if (pendingRegistration) {
+      await db.orm.public.PendingRegistration.where({ email }).delete();
+    }
+    return false;
+  }
+
+  // update the user's name and password hash with the pending registration data
+  // db transaction to ensure atomicity (if one fails, the other won't be applied)
+  await db.transaction(async (trx) => {
+    await trx.orm.public.User.where({ id: user.id }).update({
+      name: pendingRegistration.name,
+    });
+
+    await trx.orm.public.Account.where({ userId: user.id }).update({
+      password: pendingRegistration.passwordHash,
+    });
+
+    await trx.orm.public.PendingRegistration.where({ email }).delete();
+  });
+
+  return true;
+}
