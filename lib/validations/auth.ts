@@ -25,6 +25,17 @@ export const registerSchema = z
     path: ["confirmPassword"],
   });
 
+export const loginSchema = z.object({
+  email: z.email("Please enter a valid email address"),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128, "Password must be at most 128 characters")
+    .regex(/[a-z]/, "Password must contain a lowercase letter")
+    .regex(/[A-Z]/, "Password must contain a uppercase letter")
+    .regex(/[0-9]/, "Password must contain a number"),
+});
+
 export const otpSchema = z.object({
   email: z.email("Please enter a valid email address"),
   otp: z
@@ -33,5 +44,10 @@ export const otpSchema = z.object({
     .regex(/^[0-9]+$/, "OTP must contain only digits"),
 });
 
+export const emailSchema = z.object({
+  email: z.email("Please enter a valid email address"),
+});
+
+export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type OtpInput = z.infer<typeof otpSchema>;

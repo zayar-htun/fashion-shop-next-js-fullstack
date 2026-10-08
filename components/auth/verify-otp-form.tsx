@@ -17,13 +17,17 @@ import {
   FieldGroup,
   FieldLabel,
 } from "../ui/field";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { OtpInput, otpSchema } from "@/lib/validations/auth";
 import { useRouter, useSearchParams } from "next/navigation";
 import { sanitizeCallbackUrl } from "@/lib/auth/safe-redirect";
 import AuthFormPanel from "./auth-form-panel";
 import { Button } from "../ui/button";
-import { ResendVerificationOTP } from "@/app/actions/auth";
+import {
+  resendRegistartionVerification,
+  ResendVerificationOTP,
+} from "@/app/actions/auth";
+import { ErrorCodes } from "@/lib/error_code";
 
 function VerifyOtpForm() {
   const router = useRouter();
@@ -33,6 +37,7 @@ function VerifyOtpForm() {
   const resumed = searchParams.get("resumed") === "true";
   const callBackUrl = sanitizeCallbackUrl(searchParams.get("callbackUrl"));
   const [isPending, startTransition] = useTransition();
+  const [resendMessage, setResendMessage] = useState<string | null>(null);
   const form = useForm<OtpInput>({
     resolver: zodResolver(otpSchema),
     defaultValues: {
@@ -69,7 +74,31 @@ function VerifyOtpForm() {
 
   function onResendOtp() {
     startTransition(async () => {
-      return;
+      setResendMessage(null);
+      if (flow === "login") {
+        // handle
+      } else {
+        const result = await resendRegistartionVerification({ email });
+
+        if (!result.success) {
+          if (result?.code === ErrorCodes.ACCOUNT_FROZEN.code) {
+            form.setError("root", {
+              message:
+                result?.error ??
+                "Your account is frozen. pls content assistant",
+            });
+            return;
+          }
+          form.setError("root", {
+            message: result?.error ?? "Failed to resend",
+          });
+          return;
+        }
+
+        form.clearErrors("root");
+        form.setValue("otp", "");
+        setResendMessage(result?.message || "A new code is sent");
+      }
     });
   }
 
@@ -117,6 +146,12 @@ function VerifyOtpForm() {
           />
           {form.formState.errors.otp?.message && (
             <FieldError>{form.formState.errors.otp?.message}</FieldError>
+          )}
+
+          {resendMessage && (
+            <div className="border-primary/20 bg-primary/5 rounded-xl border px-4 py-3 text-sm text-green-600">
+              {resendMessage}
+            </div>
           )}
           <Button
             type="submit"

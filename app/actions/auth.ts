@@ -5,6 +5,7 @@ import { isAdminRole } from "@/lib/auth/role";
 import { ErrorCodes } from "@/lib/error_code";
 import { db } from "@/lib/prisma";
 import {
+  emailSchema,
   OtpInput,
   otpSchema,
   RegisterInput,
@@ -17,7 +18,7 @@ import {
   upsertPendingRegisteration,
 } from "@/lib/auth/pending-registartion";
 
-import z from "zod";
+import z, { success } from "zod";
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof APIError) {
@@ -196,5 +197,81 @@ export async function ResendVerificationOTP(input: OtpInput) {
   return {
     success: true,
     data: { email: normalizedEmail },
+  };
+}
+
+export async function resendRegistartionVerification(input: { email: string }) {
+  const parsed = emailSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false,
+      fieldErrors: z.flattenError(parsed.error).fieldErrors,
+    };
+  }
+  const normalizeEmail = input.email.toLocaleLowerCase();
+
+  const existingUser = await db.orm.public.User.select(
+    "id",
+    "emailVerified",
+    "role",
+    "isFrozen",
+  )
+    .where({ email: normalizeEmail })
+    .first();
+
+  if (!existingUser) {
+    return {
+      success: false,
+      error: "No account found with this email. Please register first.",
+    };
+  }
+
+  if (existingUser && existingUser?.isFrozen) {
+    return {
+      success: false,
+      error: ErrorCodes.ACCOUNT_FROZEN.message,
+      code: ErrorCodes.ACCOUNT_FROZEN.code,
+    };
+  }
+
+  if (existingUser && isAdminRole(existingUser?.role)) {
+    return {
+      success: false,
+      error: ErrorCodes.ADMIN_ACCOUNT.message,
+      code: ErrorCodes.ADMIN_ACCOUNT.code,
+    };
+  }
+
+  if (existingUser && existingUser?.emailVerified) {
+    return {
+      success: false,
+      error: ErrorCodes.EMAIL_ALREADY_EXISTS.message,
+      code: ErrorCodes.EMAIL_ALREADY_EXISTS.code,
+    };
+  }
+
+  try {
+    await auth.api.sendVerificationOTP({
+      body: {
+        email: normalizeEmail,
+        type: "email-verification",
+      },
+      headers: await headers(),
+    });
+  } catch (error) {
+    const message =
+      error instanceof APIError
+        ? error.message
+        : "Fail to resend verification email.";
+    return {
+      success: false,
+      error: message,
+    };
+  }
+
+  return {
+    success: true,
+    data: { email: normalizeEmail },
+    message: "Verification email resent successfully",
   };
 }

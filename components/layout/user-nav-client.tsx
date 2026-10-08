@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { UserIcon } from "lucide-react";
 import { Button } from "../ui/button";
+import { signOut } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
 
 type UserNavClientProps = {
   session: any;
@@ -18,7 +20,27 @@ function UserNavClient({ session }: UserNavClientProps) {
       </Button>
     );
   }
-  return <div>User</div>;
+  const router = useRouter();
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      router.replace("/login");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
+  };
+  return (
+    <div>
+      <Button
+        variant="ghost"
+        onClick={() => {
+          handleSignOut();
+        }}
+      >
+        Logout
+      </Button>
+    </div>
+  );
 }
 
 export default UserNavClient;
