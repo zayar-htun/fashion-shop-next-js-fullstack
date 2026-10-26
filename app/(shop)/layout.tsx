@@ -43,9 +43,11 @@ async function ShopShell({ children }: { children: React.ReactNode }) {
   await connection();
   const session = await getSession();
   return (
-    <div>
+    <div className="flex min-h-screen flex-col">
       <ShopHeader />
-      {children}
+      <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
+        {children}
+      </div> 
     </div>
   );
 }

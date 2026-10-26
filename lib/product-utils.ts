@@ -20,3 +20,5 @@ export const CATEGORIES = [
     label: "Kids",
   },
 ] as const;
+
+export type CategoryValue = (typeof CATEGORIES)[number]["value"];
