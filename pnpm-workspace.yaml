@@ -1,8 +1,12 @@
-ignoredBuiltDependencies:
-  - esbuild
-  - sharp
-  - unrs-resolver
+overrides:
+  '@types/react': 19.2.17
+  '@types/react-dom': 19.2.3
 
-onlyBuiltDependencies:
-  - '@prisma/engines'
-  - prisma
+allowBuilds:
+  '@prisma/engines': true
+  prisma: true
+  esbuild: false
+  sharp: false
+  unrs-resolver: false
+  msgpackr-extract: false
+  workerd: false

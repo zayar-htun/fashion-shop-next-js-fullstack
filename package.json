@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
-    "vercel-build": "prisma generate && prisma migrate deploy && next build",
-    "postinstall": "prisma generate",
+    "vercel-build": "pnpm run postinstall && prisma7 migrate deploy --config prisma7.config.ts && next build",
+    "postinstall": "prisma7 generate --config prisma7.config.ts && prisma contract emit",
     "start": "next start",
     "lint": "eslint",
     "prisma7:generate": "prisma7 generate"
@@ -53,11 +53,5 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"
-  },
-  "pnpm": {
-    "overrides": {
-      "@types/react": "19.2.17",
-      "@types/react-dom": "19.2.3"
-    }
   }
 }
