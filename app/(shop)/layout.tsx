@@ -3,6 +3,8 @@ import { getSession } from "@/lib/session";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import ShopHeader from "@/components/layout/shop-header";
+import FavouriteProvider from "@/components/providers/favourite-provider";
+import { getFavouriteIds } from "@/lib/data/favourites";
 
 function ShopLayoutFallback() {
   return (
@@ -42,13 +44,19 @@ function ShopLayoutFallback() {
 async function ShopShell({ children }: { children: React.ReactNode }) {
   await connection();
   const session = await getSession();
+  const favouriteIds = session ? await getFavouriteIds(session.user.id) : [];
   return (
-    <div className="flex min-h-screen flex-col">
-      <ShopHeader />
-      <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
-        {children}
-      </div> 
-    </div>
+    <FavouriteProvider
+      key={session?.user?.id || "guest"}
+      initialFavouriteIds={favouriteIds}
+    >
+      <div className="flex min-h-screen flex-col">
+        <ShopHeader />
+        <div className="mx-auto w-full max-w-7xl flex-1 px-4 py-8">
+          {children}
+        </div>
+      </div>
+    </FavouriteProvider>
   );
 }
 
