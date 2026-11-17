@@ -3,12 +3,34 @@ import { CategoryValue } from "@/lib/product-utils";
 import ProductGridSkeleton from "@/components/products/product-grid-skeleton";
 import { Suspense } from "react";
 import ProductGrid from "@/components/products/product-grid";
+import { homeMetadata } from "@/lib/seo";
+import type { Metadata } from "next";
+const VALID_CATEGORIES = ["MEN", "WOMEN", "TEENS", "CHILD", "KIDS"] as const;
 
 type ProductGridSectionProps = {
   searchParams: Promise<{
     category?: string;
   }>;
 };
+
+function parseCategory(
+  category: string | undefined,
+): CategoryValue | undefined {
+  return VALID_CATEGORIES.includes(category as CategoryValue)
+    ? (category as CategoryValue)
+    : undefined;
+}
+
+type HomePageProps = {
+  searchParams: Promise<{ category?: string }>;
+};
+
+export async function generateMetadata({
+  searchParams,
+}: HomePageProps): Promise<Metadata> {
+  const { category } = await searchParams;
+  return homeMetadata(parseCategory(category));
+}
 
 async function ProductGridSection({ searchParams }: ProductGridSectionProps) {
   const { category } = await searchParams;

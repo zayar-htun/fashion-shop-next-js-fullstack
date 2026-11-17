@@ -1,12 +1,29 @@
-import React from "react";
+import React, { useTransition } from "react";
 import { Button } from "../ui/button";
+import { signIn } from "@/lib/auth-client";
 
 function GoogleSigninButton() {
+  const [isPending, startTransition] = useTransition();
+
+  function handleGoogleSignIn() {
+    startTransition(async () => {
+      await signIn.social({
+        provider: "google",
+        callbackURL: "/",
+        errorCallbackURL: "/login/error",
+      });
+    });
+  }
+
   return (
     <Button
       type="button"
       variant="outline"
       className="border-border/80 bg-background hover:bg-muted/40 h-11 w-full justify-center gap-2 rounded-xl shadow-sm"
+      disabled={isPending}
+      onClick={() => {
+        handleGoogleSignIn();
+      }}
     >
       <svg
         width="20"
