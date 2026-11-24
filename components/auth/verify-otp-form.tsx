@@ -34,7 +34,6 @@ function VerifyOtpForm() {
   const searchParams = useSearchParams();
   const email = searchParams.get("email") ?? "";
   const flow = searchParams.get("flow") ?? "";
-  const resumed = searchParams.get("resumed") === "true";
   const callBackUrl = sanitizeCallbackUrl(searchParams.get("callbackUrl"));
   const [isPending, startTransition] = useTransition();
   const [resendMessage, setResendMessage] = useState<string | null>(null);
@@ -48,9 +47,14 @@ function VerifyOtpForm() {
 
   function onSubmit(data: OtpInput) {
     startTransition(async () => {
-      if (flow === "login") {
-        // Handle login flow
-      } else if (flow === "register") {
+      form.clearErrors();
+      if (flow !== "register" && flow !== "login") {
+        form.setError("root", {
+          message: "Please start from the login or registration page.",
+        });
+        return;
+      }
+      try {
         const result = await ResendVerificationOTP(data);
         if (!result.success) {
           if (result?.fieldErrors) {
@@ -67,25 +71,26 @@ function VerifyOtpForm() {
           }
           return;
         }
+        router.replace(callBackUrl || "/");
+        router.refresh();
+      } catch {
+        form.setError("root", {
+          message: "Unable to verify your email. Please try again.",
+        });
       }
-      router.replace(callBackUrl || "/");
     });
   }
 
   function onResendOtp() {
     startTransition(async () => {
       setResendMessage(null);
-      if (flow === "login") {
-        // handle
-      } else {
+      try {
         const result = await resendRegistartionVerification({ email });
 
         if (!result.success) {
           if (result?.code === ErrorCodes.ACCOUNT_FROZEN.code) {
             form.setError("root", {
-              message:
-                result?.error ??
-                "Your account is frozen. pls content assistant",
+              message: result?.error ?? ErrorCodes.ACCOUNT_FROZEN.message,
             });
             return;
           }
@@ -98,6 +103,10 @@ function VerifyOtpForm() {
         form.clearErrors("root");
         form.setValue("otp", "");
         setResendMessage(result?.message || "A new code is sent");
+      } catch {
+        form.setError("root", {
+          message: "Unable to resend the code. Please try again.",
+        });
       }
     });
   }

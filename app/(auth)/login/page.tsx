@@ -14,7 +14,7 @@ async function LoginPageContent() {
 }
 function Login() {
   return (
-    <Suspense fallback={<LoginForm />}>
+    <Suspense fallback={null}>
       <LoginPageContent />
     </Suspense>
   );

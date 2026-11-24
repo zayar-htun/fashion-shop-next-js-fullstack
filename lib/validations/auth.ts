@@ -1,5 +1,18 @@
 import { z } from "zod";
 
+const emailAddressSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .pipe(z.email("Please enter a valid email address"));
+const passwordSchema = z
+  .string()
+  .min(8, "Password must be at least 8 characters")
+  .max(128, "Password must be at most 128 characters")
+  .regex(/[a-z]/, "Password must contain a lowercase letter")
+  .regex(/[A-Z]/, "Password must contain an uppercase letter")
+  .regex(/[0-9]/, "Password must contain a number");
+
 export const registerSchema = z
   .object({
     name: z
@@ -10,14 +23,8 @@ export const registerSchema = z
         /^(?=.*[a-zA-Z])[a-zA-Z.]+(?: [a-zA-Z.]+)*$/,
         "Name must contain only letters and spaces",
       ),
-    email: z.email("Please enter a valid email address"),
-    password: z
-      .string()
-      .min(8, "Password must be at least 8 characters")
-      .max(128, "Password must be at most 128 characters")
-      .regex(/[a-z]/, "Password must contain a lowercase letter")
-      .regex(/[A-Z]/, "Password must contain a uppercase letter")
-      .regex(/[0-9]/, "Password must contain a number"),
+    email: emailAddressSchema,
+    password: passwordSchema,
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
@@ -26,18 +33,15 @@ export const registerSchema = z
   });
 
 export const loginSchema = z.object({
-  email: z.email("Please enter a valid email address"),
+  email: emailAddressSchema,
   password: z
     .string()
-    .min(8, "Password must be at least 8 characters")
-    .max(128, "Password must be at most 128 characters")
-    .regex(/[a-z]/, "Password must contain a lowercase letter")
-    .regex(/[A-Z]/, "Password must contain a uppercase letter")
-    .regex(/[0-9]/, "Password must contain a number"),
+    .min(1, "Please enter your password")
+    .max(128, "Password must be at most 128 characters"),
 });
 
 export const otpSchema = z.object({
-  email: z.email("Please enter a valid email address"),
+  email: emailAddressSchema,
   otp: z
     .string()
     .length(6, "OTP must be 6 digits")
@@ -45,8 +49,25 @@ export const otpSchema = z.object({
 });
 
 export const emailSchema = z.object({
-  email: z.email("Please enter a valid email address"),
+  email: emailAddressSchema,
 });
+
+export const resetPasswordSchema = z
+  .object({ password: passwordSchema, confirmPassword: z.string() })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export const resetPasswordRequestSchema = resetPasswordSchema.extend({
+  token: z.string().trim().min(1, "Please request a new password reset link."),
+});
+
+export type EmailInput = z.infer<typeof emailSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+export type ResetPasswordRequestInput = z.infer<
+  typeof resetPasswordRequestSchema
+>;
 
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;

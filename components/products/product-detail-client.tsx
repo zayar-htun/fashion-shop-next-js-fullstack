@@ -14,9 +14,7 @@ import {
   FieldError,
   FieldGroup,
   FieldLabel,
-  FieldSet,
 } from "../ui/field";
-import { Input } from "../ui/input";
 import {
   Select,
   SelectContent,
@@ -28,7 +26,6 @@ import {
 import { Button } from "../ui/button";
 import Link from "next/link";
 import { addToCartAction } from "@/app/actions/cart";
-import { el } from "zod/v4/locales";
 import { toast } from "../ui/toast";
 
 type ProductDetailCLientProps = {
@@ -59,7 +56,7 @@ function ProductDetailClient({ product }: ProductDetailCLientProps) {
           .map((item) => item.color),
       ),
     ];
-  }, [product.productVariants]);
+  }, [product.productVariants, selectedSize]);
 
   const selectedVariant = useMemo(() => {
     if (!selectedSize || !selectedColor) return null;
@@ -81,21 +78,25 @@ function ProductDetailClient({ product }: ProductDetailCLientProps) {
 
     if (!selectedVariant) {
       setError("Please select valid size and color.");
+      return;
     }
 
     setError(null);
 
     startTransition(async () => {
-      const result = await addToCartAction({
-        variantId: selectedVariant?.id,
-        quantity: 1,
-      });
-      if (result?.success) {
-        // router.push("/cart");
-        showToast();
-      } else if (result?.error === "User not authenticated") {
-        router.push("/login");
-      } else setError(result?.error || "Failed");
+      try {
+        const result = await addToCartAction({
+          variantId: selectedVariant.id,
+          quantity: 1,
+        });
+        if (result.success) {
+          showToast();
+        } else if (result.error === "User not authenticated") {
+          router.push("/login");
+        } else setError(result.error || "Unable to add to cart.");
+      } catch {
+        setError("Unable to add to cart. Please try again.");
+      }
     });
   }
 
@@ -104,9 +105,10 @@ function ProductDetailClient({ product }: ProductDetailCLientProps) {
       title: "Added to cart",
       description: `You successfully added ${product.name} to cart`,
       actionProps: {
-        // children: "Undo",
+        children: "View Cart",
         onClick() {
           toast.close(id);
+          router.push("/cart");
         },
       },
     });
@@ -145,7 +147,14 @@ function ProductDetailClient({ product }: ProductDetailCLientProps) {
           <FieldGroup>
             <Field className="w-full max-w-xs">
               <FieldLabel>Size</FieldLabel>
-              <Select value={selectedSize} onValueChange={setSelectedSize}>
+              <Select
+                value={selectedSize}
+                onValueChange={(size) => {
+                  setSelectedSize(size);
+                  setSelectedColor("");
+                  setError(null);
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a size" />
                 </SelectTrigger>
@@ -188,13 +197,13 @@ function ProductDetailClient({ product }: ProductDetailCLientProps) {
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button
                 disabled={!selectedVariant || isPending}
-                onClick={() => {}}
+                onClick={handleAddToCart}
                 className="flex-1"
               >
                 {isPending ? "Adding . . ." : "Add to Cart"}
               </Button>
-              <Button variant="outline">
-                <Link href="/cart">View Cart</Link>
+              <Button variant="outline" render={<Link href="/cart" />}>
+                View Cart
               </Button>
             </div>
           </FieldGroup>

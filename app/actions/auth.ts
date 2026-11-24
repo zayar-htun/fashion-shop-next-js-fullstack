@@ -10,6 +10,11 @@ import {
   otpSchema,
   RegisterInput,
   registerSchema,
+  LoginInput,
+  loginSchema,
+  EmailInput,
+  ResetPasswordRequestInput,
+  resetPasswordRequestSchema,
 } from "@/lib/validations/auth";
 import { APIError } from "better-auth";
 import { headers } from "next/headers";
@@ -18,7 +23,136 @@ import {
   upsertPendingRegisteration,
 } from "@/lib/auth/pending-registartion";
 
-import z, { success } from "zod";
+import z from "zod";
+
+export async function LoginUser(input: LoginInput) {
+  const parsed = loginSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false as const,
+      fieldErrors: z.flattenError(parsed.error).fieldErrors,
+    };
+  }
+  const email = parsed.data.email.trim().toLowerCase();
+  try {
+    const user = await db.orm.public.User.select("isFrozen", "role")
+      .where({ email })
+      .first();
+    if (user?.isFrozen) {
+      return {
+        success: false as const,
+        error: ErrorCodes.ACCOUNT_FROZEN.message,
+        code: ErrorCodes.ACCOUNT_FROZEN.code,
+      };
+    }
+    if (user && isAdminRole(user.role)) {
+      return {
+        success: false as const,
+        error: ErrorCodes.ADMIN_ACCOUNT.message,
+        code: ErrorCodes.ADMIN_ACCOUNT.code,
+      };
+    }
+    await auth.api.signInEmail({
+      body: { email, password: parsed.data.password },
+      headers: await headers(),
+    });
+    return {
+      success: true as const,
+      data: { email, requiresVerification: false },
+    };
+  } catch (error) {
+    if (
+      error instanceof APIError &&
+      (error.body?.code === "EMAIL_NOT_VERIFIED" ||
+        error.message === auth.$ERROR_CODES.EMAIL_NOT_VERIFIED)
+    ) {
+      try {
+        await auth.api.sendVerificationOTP({
+          body: { email, type: "email-verification" },
+          headers: await headers(),
+        });
+        return {
+          success: true as const,
+          data: { email, requiresVerification: true },
+        };
+      } catch {
+        return {
+          success: false as const,
+          error: "Unable to send the verification code. Please try again.",
+        };
+      }
+    }
+    return {
+      success: false as const,
+      error:
+        error instanceof APIError && error.status === "UNAUTHORIZED"
+          ? ErrorCodes.INVALID_CREDENTIALS.message
+          : "Unable to sign in. Please try again.",
+    };
+  }
+}
+
+export async function RequestPasswordReset(input: EmailInput) {
+  const parsed = emailSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false as const,
+      fieldErrors: z.flattenError(parsed.error).fieldErrors,
+    };
+  }
+  try {
+    await auth.api.requestPasswordReset({
+      body: {
+        email: parsed.data.email,
+        redirectTo: new URL(
+          "/reset-password",
+          auth.options.baseURL!,
+        ).toString(),
+      },
+      headers: await headers(),
+    });
+    return { success: true as const, data: { email: parsed.data.email } };
+  } catch {
+    return {
+      success: false as const,
+      error: "Unable to request a reset link. Please try again.",
+    };
+  }
+}
+
+export async function ResetPassword(input: ResetPasswordRequestInput) {
+  const parsed = resetPasswordRequestSchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      success: false as const,
+      fieldErrors: z.flattenError(parsed.error).fieldErrors,
+    };
+  }
+  try {
+    await auth.api.resetPassword({
+      body: { token: parsed.data.token, newPassword: parsed.data.password },
+      headers: await headers(),
+    });
+    return { success: true as const };
+  } catch (error) {
+    if (
+      error instanceof APIError &&
+      (error.body?.code === "INVALID_TOKEN" ||
+        error.message === auth.$ERROR_CODES.INVALID_TOKEN)
+    ) {
+      return {
+        success: false as const,
+        code: "INVALID_TOKEN",
+        error:
+          "This reset link is invalid or has expired. Please request a new one.",
+      };
+    }
+    return {
+      success: false as const,
+      error: "Unable to reset your password. Please try again.",
+    };
+  }
+}
 
 function getErrorMessage(error: unknown, fallback: string) {
   if (error instanceof APIError) {
@@ -208,7 +342,7 @@ export async function resendRegistartionVerification(input: { email: string }) {
       fieldErrors: z.flattenError(parsed.error).fieldErrors,
     };
   }
-  const normalizeEmail = input.email.toLocaleLowerCase();
+  const normalizeEmail = parsed.data.email;
 
   const existingUser = await db.orm.public.User.select(
     "id",

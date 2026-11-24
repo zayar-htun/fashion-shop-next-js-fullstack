@@ -8,13 +8,16 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "../ui/field";
 import { Controller, useForm } from "react-hook-form";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LoginInput, loginSchema } from "@/lib/validations/auth";
+import { LoginUser } from "@/app/actions/auth";
+import { sanitizeCallbackUrl } from "@/lib/auth/safe-redirect";
 
 function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<LoginInput>({
@@ -27,7 +30,40 @@ function LoginForm() {
 
   function onSubmit(data: LoginInput) {
     startTransition(async () => {
-      // login logic
+      form.clearErrors();
+      try {
+        const result = await LoginUser(data);
+        if (!result.success) {
+          if (result.fieldErrors) {
+            Object.entries(result.fieldErrors).forEach(([field, errors]) => {
+              if (errors?.length)
+                form.setError(field as keyof LoginInput, {
+                  message: errors.join(", "),
+                });
+            });
+          }
+          if (result.error) form.setError("root", { message: result.error });
+          return;
+        }
+        const callbackUrl = sanitizeCallbackUrl(
+          searchParams.get("callbackUrl"),
+        );
+        if (result.data.requiresVerification) {
+          const params = new URLSearchParams({
+            email: result.data.email,
+            flow: "login",
+            callbackUrl,
+          });
+          router.push(`/verify-otp?${params}`);
+          return;
+        }
+        router.replace(callbackUrl);
+        router.refresh();
+      } catch {
+        form.setError("root", {
+          message: "Unable to sign in. Please try again.",
+        });
+      }
     });
   }
 
@@ -68,6 +104,7 @@ function LoginForm() {
                   id="email"
                   type="email"
                   autoComplete="email"
+                  aria-invalid={fieldState.invalid}
                   placeholder="you@example.com"
                   className="h-11 rounded-xl"
                   {...field}
@@ -98,6 +135,7 @@ function LoginForm() {
                   id="password"
                   type="password"
                   autoComplete="current-password"
+                  aria-invalid={fieldState.invalid}
                   placeholder="Enter your password"
                   className="h-11 rounded-xl"
                   {...field}
